@@ -4,7 +4,15 @@ import platform
 def run_command(command):
     """Runs a command and returns the output."""
     try:
-        result = subprocess.run(command, capture_output=True, text=True)
+        # Check the OS and use the appropriate PowerShell executable
+        os_type = platform.system()
+        if os_type == "Windows":
+            result = subprocess.run(["powershell", "-Command", command], capture_output=True, text=True)
+        elif os_type == "Darwin":  # macOS
+            result = subprocess.run(["pwsh", "-Command", command], capture_output=True, text=True)
+        else:
+            return "Unsupported OS"
+        
         return result.stdout.strip()
     except Exception as e:
         return f"Error: {str(e)}"
@@ -12,66 +20,54 @@ def run_command(command):
 def system_health_check():
     """Checks system health (CPU, memory)."""
     os_type = platform.system()
-    if os_type == "Windows":
+    if os_type == "Windows" or os_type == "Darwin":  # Use PowerShell for both Windows and macOS
         command = """
         Get-Process | Measure-Object -Property CPU -Sum;
         Get-WmiObject Win32_OperatingSystem | Select-Object @{Name="FreeMemory";Expression={[math]::Round($_.FreePhysicalMemory / 1MB, 2)}}
         """
-        return run_command(["powershell", "-Command", command])
-    elif os_type == "Darwin":  # macOS
-        command = """
-        top -l 1 | grep "CPU usage";
-        vm_stat | grep "free"
-        """
-        return run_command(["bash", "-c", command])
+        return run_command(command)
     else:
         return "Unsupported OS"
 
 def disk_space_check():
     """Checks disk space usage."""
     os_type = platform.system()
-    if os_type == "Windows":
+    if os_type == "Windows" or os_type == "Darwin":  # Use PowerShell for both Windows and macOS
         command = "Get-PSDrive -PSProvider FileSystem | Select-Object Name,Used,Free"
-        return run_command(["powershell", "-Command", command])
-    elif os_type == "Darwin":  # macOS
-        command = "df -h | grep /dev/disk1"
-        return run_command(["bash", "-c", command])
+        return run_command(command)
     else:
         return "Unsupported OS"
 
 def network_connectivity():
     """Checks network connectivity."""
     os_type = platform.system()
-    if os_type == "Windows":
+    if os_type == "Windows" or os_type == "Darwin":  # Use PowerShell for both Windows and macOS
         command = "Test-Connection google.com -Count 2 | Select-Object Address,Status"
-        return run_command(["powershell", "-Command", command])
-    elif os_type == "Darwin":  # macOS
-        command = "ping -c 2 google.com"
-        return run_command(["bash", "-c", command])
+        return run_command(command)
     else:
         return "Unsupported OS"
 
 def disk_health_check():
     """Checks disk health (Windows and macOS)."""
     os_type = platform.system()
-    if os_type == "Windows":
+    if os_type == "Windows":  # Windows-specific disk health check
         command = "Get-WmiObject Win32_DiskDrive | Select-Object Model,Status"
-        return run_command(["powershell", "-Command", command])
-    elif os_type == "Darwin":  # macOS
-        command = "diskutil verifyVolume /"
-        return run_command(["bash", "-c", command])
+        return run_command(command)
+    elif os_type == "Darwin":  # macOS-specific disk health check
+        command = "diskutil info / | grep 'Health Status'"
+        return run_command(command)
     else:
         return "Unsupported OS"
 
 def uptime_check():
     """Checks system uptime."""
     os_type = platform.system()
-    if os_type == "Windows":
+    if os_type == "Windows":  # Windows-specific uptime check
         command = "systeminfo | findstr /C:\"System Boot Time\""
-        return run_command(["powershell", "-Command", command])
-    elif os_type == "Darwin":  # macOS
+        return run_command(command)
+    elif os_type == "Darwin":  # macOS-specific uptime check
         command = "uptime"
-        return run_command(["bash", "-c", command])
+        return run_command(command)
     else:
         return "Unsupported OS"
 
